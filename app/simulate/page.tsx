@@ -77,6 +77,16 @@ export default function SimulatePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
+      // Check res.ok BEFORE calling res.json(). If the server returned an HTML
+      // error page (e.g. Next.js crash page), calling .json() directly would
+      // throw "Unexpected end of JSON input". Reading as text first lets us
+      // extract a readable message regardless of what the server returned.
+      if (!res.ok) {
+        const body = await res.text();
+        let msg = "Failed to generate question.";
+        try { msg = JSON.parse(body).error ?? msg; } catch { /* body was HTML */ }
+        throw new Error(msg);
+      }
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
@@ -106,6 +116,13 @@ export default function SimulatePage() {
           answer,
         }),
       });
+      // Same defensive pattern: check ok before parsing JSON
+      if (!res.ok) {
+        const body = await res.text();
+        let msg = "Failed to analyze answer.";
+        try { msg = JSON.parse(body).error ?? msg; } catch { /* body was HTML */ }
+        throw new Error(msg);
+      }
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 

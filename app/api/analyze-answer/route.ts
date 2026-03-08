@@ -7,42 +7,45 @@ import type { QuestionCategory } from "@/types";
 // For behavioral questions it evaluates the STAR framework.
 // For case and situational questions it evaluates structured thinking.
 export async function POST(req: NextRequest) {
-  const { question, category, answer } = await req.json() as {
-    question: string;
-    category: QuestionCategory;
-    answer: string;
-  };
+  // Entire handler wrapped in try/catch so Anthropic SDK errors (bad key, rate
+  // limit, network failure) return clean JSON instead of an HTML crash page.
+  try {
+    const { question, category, answer } = await req.json() as {
+      question: string;
+      category: QuestionCategory;
+      answer: string;
+    };
 
-  // Build category-specific evaluation instructions
-  const evaluationInstructions =
-    category === "behavioral"
-      ? `Evaluate the answer against the STAR framework:
+    // Build category-specific evaluation instructions
+    const evaluationInstructions =
+      category === "behavioral"
+        ? `Evaluate the answer against the STAR framework:
 - Situation: Did they clearly set the context?
 - Task: Did they explain their specific responsibility?
 - Action: Did they describe what THEY personally did (not "we")?
 - Result: Did they quantify or clearly describe the outcome?
 
 Also provide a starBreakdown object with a one-sentence assessment of each component.`
-      : category === "case"
-      ? `Evaluate whether the answer demonstrates:
+        : category === "case"
+        ? `Evaluate whether the answer demonstrates:
 - Structured, logical problem decomposition
 - Business judgment and trade-off awareness
 - Data-driven thinking
 - Clear recommendation with rationale`
-      : `Evaluate whether the answer demonstrates:
+        : `Evaluate whether the answer demonstrates:
 - Sound judgment under uncertainty
 - Stakeholder awareness
 - Clear reasoning about priorities and trade-offs
 - Awareness of regulatory or compliance implications when relevant`;
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1200,
-    system: USER_PROFILE,
-    messages: [
-      {
-        role: "user",
-        content: `Evaluate this interview answer.
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1200,
+      system: USER_PROFILE,
+      messages: [
+        {
+          role: "user",
+          content: `Evaluate this interview answer.
 
 Question: "${question}"
 Category: ${category}
@@ -56,7 +59,8 @@ Score the answer 0–100 where:
 - 50–69: Adequate but missing key elements
 - Below 50: Needs significant improvement
 
-Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
+Output ONLY a JSON object — no code blocks, no markdown, no additional text before or after.
+Use this exact format:
 {
   "score": <number 0-100>,
   "strengths": ["<specific strength 1>", "<specific strength 2>"],
@@ -69,18 +73,22 @@ Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
   },` : ""}
   "suggestedAnswer": "<A 3-5 sentence model answer that demonstrates what an excellent response looks like, tailored to their background as a senior fintech PM>"
 }`,
-      },
-    ],
-  });
+        },
+      ],
+    });
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
+    // Strip any markdown fences Claude might add despite the instruction
+    const raw = (message.content[0].type === "text" ? message.content[0].text : "")
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/```\s*$/, "")
+      .trim();
 
-  try {
     const parsed = JSON.parse(raw);
     return NextResponse.json(parsed);
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to analyze answer. Please try again." },
+      { error: `Failed to analyze answer: ${msg}` },
       { status: 500 }
     );
   }

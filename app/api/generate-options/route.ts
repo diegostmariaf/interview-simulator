@@ -7,19 +7,22 @@ import type { QuestionCategory } from "@/types";
 // One option is strong, one is decent, and two are weak — but they are NOT labeled.
 // This forces the user to think critically rather than just pick the obvious one.
 export async function POST(req: NextRequest) {
-  const { question, category } = await req.json() as {
-    question: string;
-    category: QuestionCategory;
-  };
+  // Entire handler wrapped in try/catch so Anthropic SDK errors (bad key, rate
+  // limit, network failure) return clean JSON instead of an HTML crash page.
+  try {
+    const { question, category } = await req.json() as {
+      question: string;
+      category: QuestionCategory;
+    };
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    system: USER_PROFILE,
-    messages: [
-      {
-        role: "user",
-        content: `You are creating multiple-choice answer options for this interview question:
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1024,
+      system: USER_PROFILE,
+      messages: [
+        {
+          role: "user",
+          content: `You are creating multiple-choice answer options for this interview question:
 "${question}"
 
 Question type: ${category}
@@ -34,7 +37,8 @@ IMPORTANT: Shuffle the options in your response so A is not always the strongest
 Present them as realistic, full-sentence answers a candidate might actually say.
 Do NOT label which is strong or weak.
 
-Respond ONLY with valid JSON in this exact format (no markdown):
+Output ONLY a JSON object — no code blocks, no markdown, no additional text before or after.
+Use this exact format:
 {
   "options": [
     "First option text here",
@@ -43,18 +47,22 @@ Respond ONLY with valid JSON in this exact format (no markdown):
     "Fourth option text here"
   ]
 }`,
-      },
-    ],
-  });
+        },
+      ],
+    });
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
+    // Strip any markdown fences Claude might add despite the instruction
+    const raw = (message.content[0].type === "text" ? message.content[0].text : "")
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/```\s*$/, "")
+      .trim();
 
-  try {
     const parsed = JSON.parse(raw);
     return NextResponse.json({ options: parsed.options });
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to generate answer options. Please try again." },
+      { error: `Failed to generate answer options: ${msg}` },
       { status: 500 }
     );
   }
