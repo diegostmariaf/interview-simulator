@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+
+# Environment — never commit your API key
+.env.local
+.env*.local
+
+# OS
+.DS_Store
+
+# Debug logs
+npm-debug.log*
