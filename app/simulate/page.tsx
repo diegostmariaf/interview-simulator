@@ -242,7 +242,7 @@ export default function SimulatePage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-100 mb-2">Your feedback</h1>
               <p className="text-slate-400 text-sm">
-                Here&apos;s how your answer performed against a senior IC5 PM standard.
+                Here&apos;s how your answer performed against a senior PM standard.
               </p>
             </div>
             {/* Show the question for reference */}

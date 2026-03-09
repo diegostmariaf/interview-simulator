@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const difficultyLabel: Record<Difficulty, string> = {
       easy: "straightforward, suitable for an Associate PM or early-career PM",
       medium: "moderately challenging, suitable for a PM with 3–5 years of experience",
-      hard: "senior-level, expected from an IC5/Staff PM with deep domain expertise",
+      hard: "senior-level, expected from a Staff/Sr. Staff PM with deep domain expertise",
     };
 
     const jobContext = jobDescription

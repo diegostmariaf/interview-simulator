@@ -177,5 +177,5 @@ const CATEGORIES: Array<{ value: QuestionCategory; label: string; description: s
 const DIFFICULTIES: Array<{ value: Difficulty; label: string; sublabel: string }> = [
   { value: "easy", label: "Easy", sublabel: "Associate PM" },
   { value: "medium", label: "Medium", sublabel: "PM / Sr. PM" },
-  { value: "hard", label: "Hard", sublabel: "Staff / IC5" },
+  { value: "hard", label: "Hard", sublabel: "Staff / Sr. Staff" },
 ];

@@ -78,7 +78,7 @@ export default function LandingHero() {
           <FeatureCard
             icon={<MessageSquare className="w-5 h-5 text-brand-400" />}
             title="Personalized to You"
-            description="Questions and feedback are calibrated to a senior IC5 PM in fintech. Paste a job description for role-specific practice."
+            description="Questions and feedback are calibrated to a senior PM in fintech. Paste a job description for role-specific practice."
           />
         </div>
       </section>
